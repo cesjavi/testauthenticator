@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using ItemManager.Models;
@@ -6,22 +7,27 @@ namespace ItemManager.Services;
 
 public class TotpService
 {
-    private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     public bool ValidateCode(User user, string code, int tolerance = 1)
     {
-        if (string.IsNullOrWhiteSpace(code))
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(user.SecretKey))
         {
             return false;
         }
 
+        var trimmedCode = code.Trim();
         var secretBytes = Base32Decode(user.SecretKey);
-        var timestamp = DateTime.UtcNow;
+        if (secretBytes.Length == 0)
+        {
+            return false;
+        }
+
+        var unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         for (var offset = -tolerance; offset <= tolerance; offset++)
         {
-            var comparison = GenerateCode(secretBytes, timestamp.AddSeconds(offset * 30));
-            if (CryptographicEquals(code, comparison))
+            var comparison = GenerateCode(secretBytes, unixTime + (offset * 30L));
+            if (CryptographicEquals(trimmedCode, comparison))
             {
                 return true;
             }
@@ -37,17 +43,16 @@ public class TotpService
         return $"otpauth://totp/{label}?secret={user.SecretKey}&issuer={encodedIssuer}&digits=6";
     }
 
-    private static string GenerateCode(byte[] secret, DateTime timestamp)
+    private static string GenerateCode(byte[] secret, long unixTimeSeconds)
     {
-        var timestep = (long)(timestamp.ToUniversalTime() - UnixEpoch).TotalSeconds / 30L;
-        var timestepBytes = BitConverter.GetBytes(timestep);
-        if (BitConverter.IsLittleEndian)
-        {
-            Array.Reverse(timestepBytes);
-        }
+        var timestep = unixTimeSeconds / 30L;
+        Span<byte> timestepBytes = stackalloc byte[8];
+        BinaryPrimitives.WriteInt64BigEndian(timestepBytes, timestep);
 
         using var hmac = new HMACSHA1(secret);
-        var hash = hmac.ComputeHash(timestepBytes);
+        var message = new byte[8];
+        timestepBytes.CopyTo(message);
+        var hash = hmac.ComputeHash(message);
         var offset = hash[^1] & 0x0F;
         var binaryCode = (hash[offset] & 0x7F) << 24
                          | (hash[offset + 1] & 0xFF) << 16
@@ -61,7 +66,11 @@ public class TotpService
     private static byte[] Base32Decode(string input)
     {
         const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-        var cleaned = input.Trim().Replace("=", string.Empty).ToUpperInvariant();
+        var cleaned = input
+            .Trim()
+            .Replace("=", string.Empty)
+            .Replace(" ", string.Empty)
+            .ToUpperInvariant();
 
         var bits = new StringBuilder();
         foreach (var c in cleaned)

@@ -17,6 +17,128 @@ Este proyecto contiene un ejemplo mínimo construido con .NET que ofrece dos for
 * `src/ItemManager.Gui`: aplicación WinForms que permite iniciar sesión y administrar los items directamente.
 * `src/ItemManager/Filters/SessionValidationFilter.cs`: filtro que protege el grupo de endpoints `/items` en la API.
 
+## Implementación de autenticación con TOTP
+
+El proyecto utiliza claves compartidas en formato Base32 y el algoritmo TOTP (RFC 6238) para generar y validar códigos de seis
+dígitos compatibles con Google Authenticator. Las claves se almacenan en el archivo `src/ItemManager/App_Data/users.json`, que
+se carga en memoria al iniciar la aplicación. Cada entrada contiene usuario, contraseña en texto plano para las pruebas de
+concepto y el secreto TOTP. Cuando no existe el archivo, se crea automáticamente con usuarios de ejemplo.
+
+La clase central es `TotpService` (en `src/ItemManager.Core/Services/TotpService.cs`), que expone métodos para:
+
+* Generar claves secretas nuevas (`GenerateSecretKey`).
+* Validar códigos proporcionados por los clientes (`ValidateCode`) usando ventanas de tolerancia de 30 segundos.
+* Construir URIs `otpauth://` listas para registrar en aplicaciones de autenticación (`BuildOtpAuthUri`).
+
+En ambos frontales (API y GUI) se reutilizan estos servicios a través de la capa Core, por lo que el comportamiento es
+consistente entre las dos experiencias.
+
+## Ejemplos de uso
+
+### API ASP.NET Core
+
+En la API se expone un endpoint de login que utiliza `TotpService` y `UserStore` para autenticar usuarios. A continuación se
+muestra un extracto simplificado del flujo (ubicado en `src/ItemManager/Program.cs`):
+
+```csharp
+app.MapPost("/auth/login", (LoginRequest request, TotpService totp, UserStore users) =>
+{
+    var user = users.FindByUsername(request.Username);
+    if (user is null || user.Password != request.Password)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!totp.ValidateCode(user, request.OtpCode))
+    {
+        return Results.Unauthorized();
+    }
+
+    var session = users.CreateSession(user);
+    return Results.Ok(new { session.Token, session.ExpiresAt });
+});
+```
+
+Una vez obtenido el token, los consumidores pueden invocar los endpoints de `/items` incluyendo el encabezado `X-Session-Token`.
+El archivo `src/ItemManager/Filters/SessionValidationFilter.cs` contiene la validación reutilizable para proteger estos recursos.
+
+#### Formulario de login con Razor Pages
+
+Si deseas construir una interfaz web con ASP.NET Core que consuma directamente `AuthService`, puedes reutilizar la misma lógica
+del formulario WinForms dentro de una página Razor. El siguiente ejemplo guarda el token de sesión en `ISession` para posteriores
+llamadas a la API:
+
+```csharp
+public class LoginModel : PageModel
+{
+    private readonly AuthService _authService;
+
+    public LoginModel(AuthService authService)
+    {
+        _authService = authService;
+    }
+
+    [BindProperty]
+    public string Username { get; set; } = string.Empty;
+
+    [BindProperty]
+    public string Password { get; set; } = string.Empty;
+
+    [BindProperty]
+    public string OtpCode { get; set; } = string.Empty;
+
+    public IActionResult OnPost()
+    {
+        var login = new LoginRequest(Username, Password, OtpCode);
+        var result = _authService.TryLogin(login);
+
+        if (!result.Success)
+        {
+            ModelState.AddModelError(string.Empty, "Credenciales o código TOTP inválido");
+            return Page();
+        }
+
+        HttpContext.Session.SetString("X-Session-Token", result.SessionToken!);
+        return RedirectToPage("/Items/Index");
+    }
+}
+```
+
+El formulario `.cshtml` correspondiente pediría los tres campos (`Username`, `Password`, `OtpCode`) y mostraría los errores
+agregados a `ModelState`. Recuerda importar `ItemManager.Services` para disponer de `AuthService` en la página. Una vez
+autenticado, la aplicación puede reutilizar el token almacenado en sesión para invocar `GET` o `POST` sobre `/items`.
+
+### Aplicación WinForms
+
+La interfaz gráfica (`src/ItemManager.Gui`) también consume `TotpService` y `UserStore`. El formulario de inicio de sesión
+(`LoginForm.cs`) solicita las credenciales y el código TOTP vigente. Si la validación tiene éxito se abre la ventana principal
+con el listado de items. El siguiente fragmento ilustra la lógica principal del botón de ingreso:
+
+```csharp
+private void OnLoginClick(object sender, EventArgs e)
+{
+    var user = _userStore.FindByUsername(txtUsername.Text);
+    if (user is null || user.Password != txtPassword.Text)
+    {
+        MessageBox.Show("Usuario o contraseña inválidos");
+        return;
+    }
+
+    if (!_totpService.ValidateCode(user, txtTotp.Text))
+    {
+        MessageBox.Show("Código TOTP inválido");
+        return;
+    }
+
+    var session = _userStore.CreateSession(user);
+    new MainForm(_userStore, session).Show();
+    Hide();
+}
+```
+
+Desde el menú de la GUI también es posible registrar nuevos usuarios de prueba y generar el código QR mediante `BuildOtpAuthUri`
+para enrolarlos rápidamente en Google Authenticator.
+
 ## Ejecutar la API
 
 ```bash

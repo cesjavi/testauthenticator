@@ -1,3 +1,5 @@
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Text;
 using ItemManager.Core.Models;
 using ItemManager.Core.Services;
@@ -81,5 +83,26 @@ public partial class LoginForm : Form
     {
         using var registerForm = new RegisterUserForm(_userStore, _totpService, Issuer);
         registerForm.ShowDialog(this);
+    }
+
+    private void BrandPanel_Paint(object? sender, PaintEventArgs e)
+    {
+        if (sender is not Panel panel)
+        {
+            return;
+        }
+
+        var rectangle = panel.ClientRectangle;
+        if (rectangle.Width == 0 || rectangle.Height == 0)
+        {
+            return;
+        }
+
+        using var gradientBrush = new LinearGradientBrush(
+            rectangle,
+            Color.FromArgb(0, 169, 237),
+            Color.FromArgb(0, 82, 204),
+            LinearGradientMode.Vertical);
+        e.Graphics.FillRectangle(gradientBrush, rectangle);
     }
 }

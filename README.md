@@ -14,8 +14,132 @@ Este proyecto contiene un ejemplo mínimo construido con .NET que ofrece dos for
 
 * `src/ItemManager.Core`: biblioteca con los modelos y servicios compartidos (usuarios, autenticación, sesiones, items y TOTP).
 * `src/ItemManager`: API minimalista con endpoints para autenticación y gestión de items.
+* `src/ItemManager.ApiClient`: biblioteca reutilizable con un cliente HTTP fuertemente tipado para consumir la API.
 * `src/ItemManager.Gui`: aplicación WinForms que permite iniciar sesión y administrar los items directamente.
+* `src/ItemManager.WebApp`: aplicación Razor Pages que consume los endpoints protegidos de la API.
 * `src/ItemManager/Filters/SessionValidationFilter.cs`: filtro que protege el grupo de endpoints `/items` en la API.
+
+## Implementación de autenticación con TOTP
+
+El proyecto utiliza claves compartidas en formato Base32 y el algoritmo TOTP (RFC 6238) para generar y validar códigos de seis
+dígitos compatibles con Google Authenticator. Las claves se almacenan en el archivo `src/ItemManager/App_Data/users.json`, que
+se carga en memoria al iniciar la aplicación. Cada entrada contiene usuario, contraseña en texto plano para las pruebas de
+concepto y el secreto TOTP. Cuando no existe el archivo, se crea automáticamente con usuarios de ejemplo.
+
+La clase central es `TotpService` (en `src/ItemManager.Core/Services/TotpService.cs`), que expone métodos para:
+
+* Generar claves secretas nuevas (`GenerateSecretKey`).
+* Validar códigos proporcionados por los clientes (`ValidateCode`) usando ventanas de tolerancia de 30 segundos.
+* Construir URIs `otpauth://` listas para registrar en aplicaciones de autenticación (`BuildOtpAuthUri`).
+
+En ambos frontales (API y GUI) se reutilizan estos servicios a través de la capa Core, por lo que el comportamiento es
+consistente entre las dos experiencias.
+
+## Ejemplos de uso
+
+### API ASP.NET Core
+
+En la API se expone un endpoint de login que utiliza `TotpService` y `UserStore` para autenticar usuarios. A continuación se
+muestra un extracto simplificado del flujo (ubicado en `src/ItemManager/Program.cs`):
+
+```csharp
+app.MapPost("/auth/login", (LoginRequest request, TotpService totp, UserStore users) =>
+{
+    var user = users.FindByUsername(request.Username);
+    if (user is null || user.Password != request.Password)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!totp.ValidateCode(user, request.OtpCode))
+    {
+        return Results.Unauthorized();
+    }
+
+    var session = users.CreateSession(user);
+    return Results.Ok(new { session.Token, session.ExpiresAt });
+});
+```
+
+Una vez obtenido el token, los consumidores pueden invocar los endpoints de `/items` incluyendo el encabezado `X-Session-Token`.
+El archivo `src/ItemManager/Filters/SessionValidationFilter.cs` contiene la validación reutilizable para proteger estos recursos.
+
+#### Formulario de login con Razor Pages
+
+Si deseas construir una interfaz web con ASP.NET Core que consuma directamente `AuthService`, puedes reutilizar la misma lógica
+del formulario WinForms dentro de una página Razor. El siguiente ejemplo guarda el token de sesión en `ISession` para posteriores
+llamadas a la API:
+
+```csharp
+public class LoginModel : PageModel
+{
+    private readonly AuthService _authService;
+
+    public LoginModel(AuthService authService)
+    {
+        _authService = authService;
+    }
+
+    [BindProperty]
+    public string Username { get; set; } = string.Empty;
+
+    [BindProperty]
+    public string Password { get; set; } = string.Empty;
+
+    [BindProperty]
+    public string OtpCode { get; set; } = string.Empty;
+
+    public IActionResult OnPost()
+    {
+        var login = new LoginRequest(Username, Password, OtpCode);
+        var result = _authService.TryLogin(login);
+
+        if (!result.Success)
+        {
+            ModelState.AddModelError(string.Empty, "Credenciales o código TOTP inválido");
+            return Page();
+        }
+
+        HttpContext.Session.SetString("X-Session-Token", result.SessionToken!);
+        return RedirectToPage("/Items/Index");
+    }
+}
+```
+
+El formulario `.cshtml` correspondiente pediría los tres campos (`Username`, `Password`, `OtpCode`) y mostraría los errores
+agregados a `ModelState`. Recuerda importar `ItemManager.Services` para disponer de `AuthService` en la página. Una vez
+autenticado, la aplicación puede reutilizar el token almacenado en sesión para invocar `GET` o `POST` sobre `/items`.
+
+### Aplicación WinForms
+
+La interfaz gráfica (`src/ItemManager.Gui`) también consume `TotpService` y `UserStore`. El formulario de inicio de sesión
+(`LoginForm.cs`) solicita las credenciales y el código TOTP vigente. Si la validación tiene éxito se abre la ventana principal
+con el listado de items. El siguiente fragmento ilustra la lógica principal del botón de ingreso:
+
+```csharp
+private void OnLoginClick(object sender, EventArgs e)
+{
+    var user = _userStore.FindByUsername(txtUsername.Text);
+    if (user is null || user.Password != txtPassword.Text)
+    {
+        MessageBox.Show("Usuario o contraseña inválidos");
+        return;
+    }
+
+    if (!_totpService.ValidateCode(user, txtTotp.Text))
+    {
+        MessageBox.Show("Código TOTP inválido");
+        return;
+    }
+
+    var session = _userStore.CreateSession(user);
+    new MainForm(_userStore, session).Show();
+    Hide();
+}
+```
+
+Desde el menú de la GUI también es posible registrar nuevos usuarios de prueba y generar el código QR mediante `BuildOtpAuthUri`
+para enrolarlos rápidamente en Google Authenticator.
 
 ## Ejecutar la API
 
@@ -24,6 +148,53 @@ dotnet run --project src/ItemManager/ItemManager.csproj
 ```
 
 La API quedará disponible en `http://localhost:5000` por defecto.
+
+## Cliente de consola para consumir la API
+
+El proyecto `src/ItemManager.Client` ofrece un cliente de referencia que consume los endpoints expuestos por la API minimalista.
+Funciona en cualquier sistema operativo con .NET 8 instalado y facilita probar el flujo completo sin necesidad de construir una
+interfaz gráfica.
+
+```bash
+dotnet run --project src/ItemManager.Client/ItemManager.Client.csproj -- --url=http://localhost:5000
+```
+
+Si omites el parámetro `--url`, el cliente intentará conectarse a `http://localhost:5000` o al valor definido en la variable de
+entorno `ITEM_MANAGER_BASE_URL`.
+
+Al iniciarse mostrará un menú interactivo con las siguientes acciones:
+
+1. **Iniciar sesión**: solicita usuario, contraseña y código TOTP vigente. Al autenticarse correctamente almacena el token de
+   sesión.
+2. **Listar items**: realiza `GET /items` usando el encabezado `X-Session-Token`.
+3. **Crear item**: envía `POST /items` con el cuerpo JSON correspondiente.
+4. **Actualizar item**: utiliza `PUT /items/{id}` para modificar nombre, descripción y cantidad.
+5. **Eliminar item**: invoca `DELETE /items/{id}`.
+6. **Cerrar sesión**: descarta el token para forzar un nuevo login en la siguiente operación protegida.
+
+Los errores de autenticación muestran mensajes claros y, en caso de que el token caduque, el cliente solicitará volver a iniciar
+sesión antes de continuar.
+
+## Ejecutar la aplicación web ASP.NET Core
+
+```bash
+dotnet run --project src/ItemManager.WebApp/ItemManager.WebApp.csproj
+```
+
+La aplicación Razor Pages arranca en `http://localhost:5130` (o el puerto asignado por Kestrel) y consume la API configurada en
+`appsettings.json` bajo la clave `ItemManagerApi:BaseUrl`. Puedes modificar ese valor o exportar la variable de entorno
+`ASPNETCORE_URLS` para que ambos servicios convivan en puertos distintos.
+
+La interfaz web replica el flujo de autenticación de Mercado Pago que ya se implementó en la app WinForms:
+
+1. **Inicio de sesión** (`/Index`): solicita usuario, contraseña y código TOTP. Si la autenticación es exitosa, almacena el token de
+   sesión en `ISession`.
+2. **Listado de items** (`/Items`): muestra la tabla obtenida de `GET /items` y permite refrescar el contenido manualmente.
+3. **Alta y baja**: desde la misma página se pueden crear items (enviando `POST /items`) o eliminarlos (`DELETE /items/{id}`) con
+   confirmación en el navegador.
+4. **Cerrar sesión**: desde el encabezado se limpia la sesión y se redirige al formulario de login.
+
+Si la API responde con un `401`, la aplicación invalida la sesión y redirige nuevamente al inicio para solicitar credenciales.
 
 ## Ejecutar la aplicación WinForms
 

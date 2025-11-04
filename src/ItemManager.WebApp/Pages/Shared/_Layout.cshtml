@@ -1,0 +1,35 @@
+@{
+    var displayName = Context.Session.GetString(SessionKeys.DisplayName);
+    var username = Context.Session.GetString(SessionKeys.Username);
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Item Manager Web</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" />
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <header class="navbar">
+        <div class="navbar__brand">Item Manager</div>
+        <nav class="navbar__actions">
+            @if (!string.IsNullOrEmpty(displayName))
+            {
+                <span class="navbar__user">Hola, @displayName (@username)</span>
+                <form method="post" asp-page="/Logout">
+                    <button type="submit" class="button button--secondary">Cerrar sesión</button>
+                </form>
+            }
+        </nav>
+    </header>
+    <main class="container">
+        @RenderBody()
+    </main>
+    <footer class="footer">
+        <span>Demo protegida con TOTP</span>
+    </footer>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

@@ -10,6 +10,7 @@ public partial class LoginForm : Form
     private readonly ItemRepository _itemRepository;
     private readonly TotpService _totpService;
     private readonly UserStore _userStore;
+    private const string Issuer = "ItemManager";
 
     public LoginForm(AuthService authService, ItemRepository itemRepository, TotpService totpService, UserStore userStore)
     {
@@ -65,16 +66,20 @@ public partial class LoginForm : Form
     private void OtpInfoLink_LinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
     {
         var builder = new StringBuilder();
-        const string issuer = "ItemManager";
-
         foreach (var user in _userStore.GetAll())
         {
             builder.AppendLine($"Usuario: {user.DisplayName} ({user.Username})");
             builder.AppendLine($"Secreto: {user.SecretKey}");
-            builder.AppendLine($"URI: {_totpService.BuildOtpAuthUri(user, issuer)}");
+            builder.AppendLine($"URI: {_totpService.BuildOtpAuthUri(user, Issuer)}");
             builder.AppendLine();
         }
 
         MessageBox.Show(builder.ToString(), "Configurar Google Authenticator", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private void RegisterButton_Click(object? sender, EventArgs e)
+    {
+        using var registerForm = new RegisterUserForm(_userStore, _totpService, Issuer);
+        registerForm.ShowDialog(this);
     }
 }

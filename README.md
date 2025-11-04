@@ -31,7 +31,7 @@ La API quedará disponible en `http://localhost:5000` por defecto.
 dotnet run --project src/ItemManager.Gui/ItemManager.Gui.csproj
 ```
 
-Al iniciar se solicitarán usuario, contraseña y el código TOTP vigente. El enlace "Ver secretos TOTP" muestra los secretos precargados y las URI `otpauth://` listas para registrar en Google Authenticator.
+Al iniciar se solicitarán usuario, contraseña y el código TOTP vigente. El enlace "Ver secretos TOTP" muestra los secretos precargados y las URI `otpauth://` listas para registrar en Google Authenticator. Además, el botón "Registrar en Authenticator" permite crear nuevas cuentas de prueba desde la propia app y copiar los datos necesarios para enrolarlas.
 
 ## Configurar Google Authenticator
 
@@ -49,7 +49,7 @@ Se incluyen usuarios precargados para facilitar las pruebas. Puedes consultarlos
 curl http://localhost:5000/auth/users
 ```
 
-Cada entrada incluye `SecretKey` y `QrUri`. Copia la URI en un generador de QR o agrégala manualmente en Google Authenticator para generar códigos válidos.
+Cada entrada incluye `SecretKey` y `QrUri`. Copia la URI en un generador de QR o agrégala manualmente en Google Authenticator para generar códigos válidos. Alternativamente, desde la GUI de escritorio presiona "Registrar en Authenticator" para crear un usuario de prueba y obtener el secreto y la URI listos para enrolar.
 
 ## Flujo de autenticación en la API
 

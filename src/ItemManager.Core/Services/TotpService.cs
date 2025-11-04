@@ -8,6 +8,27 @@ public class TotpService
 {
     private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    public string GenerateSecretKey(int length = 16)
+    {
+        if (length <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(length));
+        }
+
+        const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        var chars = new char[length];
+        Span<byte> buffer = stackalloc byte[length];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(buffer);
+
+        for (var i = 0; i < length; i++)
+        {
+            chars[i] = alphabet[buffer[i] % alphabet.Length];
+        }
+
+        return new string(chars);
+    }
+
     public bool ValidateCode(User user, string code, int tolerance = 1)
     {
         if (string.IsNullOrWhiteSpace(code))

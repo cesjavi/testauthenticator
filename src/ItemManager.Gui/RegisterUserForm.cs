@@ -2,6 +2,7 @@ using System.Linq;
 using System.Windows.Forms;
 using ItemManager.Core.Models;
 using ItemManager.Core.Services;
+using QRCoder;
 
 namespace ItemManager.Gui;
 
@@ -62,11 +63,14 @@ public partial class RegisterUserForm : Form
         {
             secretTextBox.Text = string.Empty;
             uriTextBox.Text = string.Empty;
+            UpdateQrCode(null);
             return;
         }
 
         secretTextBox.Text = selectedUser.SecretKey;
-        uriTextBox.Text = _totpService.BuildOtpAuthUri(selectedUser, _issuer);
+        var uri = _totpService.BuildOtpAuthUri(selectedUser, _issuer);
+        uriTextBox.Text = uri;
+        UpdateQrCode(uri);
     }
 
     private void UserComboBox_SelectedIndexChanged(object? sender, EventArgs e)
@@ -125,5 +129,25 @@ public partial class RegisterUserForm : Form
         newUsernameTextBox.Clear();
         displayNameTextBox.Clear();
         passwordTextBox.Clear();
+    }
+
+    private void UpdateQrCode(string? uri)
+    {
+        if (qrPictureBox.Image is not null)
+        {
+            var previous = qrPictureBox.Image;
+            qrPictureBox.Image = null;
+            previous.Dispose();
+        }
+
+        if (string.IsNullOrWhiteSpace(uri))
+        {
+            return;
+        }
+
+        using var generator = new QRCodeGenerator();
+        using var data = generator.CreateQrCode(uri, QRCodeGenerator.ECCLevel.Q);
+        using var code = new QRCode(data);
+        qrPictureBox.Image = code.GetGraphic(20);
     }
 }

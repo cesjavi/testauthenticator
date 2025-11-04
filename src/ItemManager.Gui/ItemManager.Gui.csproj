@@ -7,7 +7,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="../ItemManager.Core/ItemManager.Core.csproj" />
   </ItemGroup>

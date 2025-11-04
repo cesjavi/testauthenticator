@@ -24,6 +24,7 @@ partial class LoginForm
         otpLabel = new Label();
         otpTextBox = new TextBox();
         loginButton = new Button();
+        registerButton = new Button();
         messageLabel = new Label();
         otpInfoLink = new LinkLabel();
         SuspendLayout();
@@ -87,15 +88,25 @@ partial class LoginForm
         loginButton.Text = "Ingresar";
         loginButton.UseVisualStyleBackColor = true;
         loginButton.Click += LoginButton_Click;
-        // 
+        //
+        // registerButton
+        //
+        registerButton.Location = new Point(24, 217);
+        registerButton.Name = "registerButton";
+        registerButton.Size = new Size(152, 27);
+        registerButton.TabIndex = 8;
+        registerButton.Text = "Registrar en Authenticator";
+        registerButton.UseVisualStyleBackColor = true;
+        registerButton.Click += RegisterButton_Click;
+        //
         // messageLabel
-        // 
+        //
         messageLabel.AutoSize = true;
         messageLabel.ForeColor = Color.Firebrick;
         messageLabel.Location = new Point(24, 188);
         messageLabel.Name = "messageLabel";
         messageLabel.Size = new Size(0, 15);
-        messageLabel.TabIndex = 8;
+        messageLabel.TabIndex = 9;
         // 
         // otpInfoLink
         // 
@@ -113,7 +124,8 @@ partial class LoginForm
         AcceptButton = loginButton;
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(360, 235);
+        ClientSize = new Size(360, 262);
+        Controls.Add(registerButton);
         Controls.Add(otpInfoLink);
         Controls.Add(messageLabel);
         Controls.Add(loginButton);
@@ -144,5 +156,6 @@ partial class LoginForm
     private Button loginButton;
     private Label messageLabel;
     private LinkLabel otpInfoLink;
+    private Button registerButton;
     private System.ComponentModel.IContainer? components;
 }

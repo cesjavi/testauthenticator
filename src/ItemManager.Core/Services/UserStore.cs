@@ -26,4 +26,15 @@ public class UserStore
         _users.FirstOrDefault(user => string.Equals(user.Username, username, StringComparison.OrdinalIgnoreCase));
 
     public IEnumerable<User> GetAll() => _users.AsReadOnly();
+
+    public bool Add(User user)
+    {
+        if (FindByUsername(user.Username) is not null)
+        {
+            return false;
+        }
+
+        _users.Add(user);
+        return true;
+    }
 }

@@ -31,14 +31,22 @@ La API quedará disponible en `http://localhost:5000` por defecto.
 dotnet run --project src/ItemManager.Gui/ItemManager.Gui.csproj
 ```
 
-Al iniciar se solicitarán usuario, contraseña y el código TOTP vigente. El enlace "Ver secretos TOTP" muestra los secretos precargados y las URI `otpauth://` listas para registrar en Google Authenticator. Además, el botón "Registrar en Authenticator" permite crear nuevas cuentas de prueba desde la propia app y copiar los datos necesarios para enrolarlas.
+Al iniciar se solicitarán usuario, contraseña y el código TOTP vigente. El enlace "Ver secretos TOTP" muestra los secretos precargados y las URI `otpauth://` listas para registrar en Google Authenticator. Además, el botón "Registrar en Authenticator" abre un asistente que genera un código QR listo para escanear y, si fuera necesario, permite copiar el secreto y la URI para enrolar nuevas cuentas de prueba.
+
+## Registrar una cuenta en Google Authenticator desde la GUI
+
+1. Desde la pantalla de inicio de sesión haz clic en **Registrar en Authenticator**.
+2. En la ventana que se abre puedes seleccionar un usuario existente para ver su secreto, la URI `otpauth://` y el código QR correspondiente.
+3. Para crear un nuevo usuario, completa los campos **Usuario**, **Nombre a mostrar** y **Contraseña**, y pulsa **Registrar**. Se generará un secreto TOTP único y el código QR se actualizará automáticamente.
+4. Escanea el código QR con la aplicación Google Authenticator de tu dispositivo. Si no puedes escanearlo, utiliza los botones **Copiar** para obtener el secreto o la URI y agrégalos manualmente en la app.
+5. Vuelve a la pantalla de inicio de sesión e ingresa el código TOTP que genera Google Authenticator para el usuario registrado.
 
 ## Configurar Google Authenticator
 
-1. Abre la aplicación Google Authenticator en tu dispositivo.
-2. Elige la opción de **Agregar cuenta** y selecciona "Introducir clave de configuración" (o escanear QR si generas el código con la URI `otpauth://`).
+1. Abre la aplicación Google Authenticator en tu dispositivo y elige **Agregar cuenta**.
+2. Selecciona la opción **Escanear código QR** y apunta al QR generado en la ventana de registro de la GUI. Si prefieres hacerlo manualmente, elige **Introducir clave de configuración** y usa el secreto o la URI `otpauth://` que muestra la misma pantalla.
 3. Usa como **Nombre de cuenta** el issuer configurado en el proyecto, por defecto `ItemManager`. Puedes cambiarlo editando la constante `issuer` tanto en `src/ItemManager/Program.cs` como en `src/ItemManager.Gui/LoginForm.cs`.
-4. Copia el valor de `SecretKey` del usuario que desees registrar. Los secretos precargados se definen en `src/ItemManager.Core/Services/UserStore.cs`; puedes reemplazarlos por los de tu organización o agregar nuevos usuarios si lo necesitas.
+4. Los secretos precargados se definen en `src/ItemManager.Core/Services/UserStore.cs`; puedes reemplazarlos por los de tu organización o agregar nuevos usuarios desde la propia interfaz gráfica.
 5. Guarda la cuenta y obtén el código TOTP de 6 dígitos generado por Google Authenticator para iniciar sesión en la API o en la aplicación WinForms.
 
 ## Usuarios de ejemplo
@@ -49,7 +57,7 @@ Se incluyen usuarios precargados para facilitar las pruebas. Puedes consultarlos
 curl http://localhost:5000/auth/users
 ```
 
-Cada entrada incluye `SecretKey` y `QrUri`. Copia la URI en un generador de QR o agrégala manualmente en Google Authenticator para generar códigos válidos. Alternativamente, desde la GUI de escritorio presiona "Registrar en Authenticator" para crear un usuario de prueba y obtener el secreto y la URI listos para enrolar.
+Cada entrada incluye `SecretKey` y `QrUri`. Desde la aplicación de escritorio puedes escanear directamente el QR que genera la ventana "Registrar en Authenticator" o, si lo prefieres, copiar la URI/secreto para registrarlos manualmente en Google Authenticator.
 
 ## Flujo de autenticación en la API
 

@@ -1,3 +1,4 @@
+using ItemManager.ApiClient;
 using ItemManager.Core.Models;
 
 namespace ItemManager.ClientApp;

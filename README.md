@@ -14,7 +14,9 @@ Este proyecto contiene un ejemplo mínimo construido con .NET que ofrece dos for
 
 * `src/ItemManager.Core`: biblioteca con los modelos y servicios compartidos (usuarios, autenticación, sesiones, items y TOTP).
 * `src/ItemManager`: API minimalista con endpoints para autenticación y gestión de items.
+* `src/ItemManager.ApiClient`: biblioteca reutilizable con un cliente HTTP fuertemente tipado para consumir la API.
 * `src/ItemManager.Gui`: aplicación WinForms que permite iniciar sesión y administrar los items directamente.
+* `src/ItemManager.WebApp`: aplicación Razor Pages que consume los endpoints protegidos de la API.
 * `src/ItemManager/Filters/SessionValidationFilter.cs`: filtro que protege el grupo de endpoints `/items` en la API.
 
 ## Implementación de autenticación con TOTP
@@ -172,6 +174,27 @@ Al iniciarse mostrará un menú interactivo con las siguientes acciones:
 
 Los errores de autenticación muestran mensajes claros y, en caso de que el token caduque, el cliente solicitará volver a iniciar
 sesión antes de continuar.
+
+## Ejecutar la aplicación web ASP.NET Core
+
+```bash
+dotnet run --project src/ItemManager.WebApp/ItemManager.WebApp.csproj
+```
+
+La aplicación Razor Pages arranca en `http://localhost:5130` (o el puerto asignado por Kestrel) y consume la API configurada en
+`appsettings.json` bajo la clave `ItemManagerApi:BaseUrl`. Puedes modificar ese valor o exportar la variable de entorno
+`ASPNETCORE_URLS` para que ambos servicios convivan en puertos distintos.
+
+La interfaz web replica el flujo de autenticación de Mercado Pago que ya se implementó en la app WinForms:
+
+1. **Inicio de sesión** (`/Index`): solicita usuario, contraseña y código TOTP. Si la autenticación es exitosa, almacena el token de
+   sesión en `ISession`.
+2. **Listado de items** (`/Items`): muestra la tabla obtenida de `GET /items` y permite refrescar el contenido manualmente.
+3. **Alta y baja**: desde la misma página se pueden crear items (enviando `POST /items`) o eliminarlos (`DELETE /items/{id}`) con
+   confirmación en el navegador.
+4. **Cerrar sesión**: desde el encabezado se limpia la sesión y se redirige al formulario de login.
+
+Si la API responde con un `401`, la aplicación invalida la sesión y redirige nuevamente al inicio para solicitar credenciales.
 
 ## Ejecutar la aplicación WinForms
 

@@ -1,3 +1,4 @@
+using ItemManager.ApiClient;
 using ItemManager.ClientApp;
 
 var baseUrlArg = args.FirstOrDefault(arg => arg.StartsWith("--url=", StringComparison.OrdinalIgnoreCase));

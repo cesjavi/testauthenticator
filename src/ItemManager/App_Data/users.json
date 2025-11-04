@@ -1,0 +1,14 @@
+[
+  {
+    "Username": "admin",
+    "DisplayName": "Administrador",
+    "Password": "admin123",
+    "SecretKey": "JBSWY3DPEHPK3PXP"
+  },
+  {
+    "Username": "invitado",
+    "DisplayName": "Invitado",
+    "Password": "guest123",
+    "SecretKey": "NB2W45DFOIZA===="
+  }
+]

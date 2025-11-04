@@ -147,6 +147,32 @@ dotnet run --project src/ItemManager/ItemManager.csproj
 
 La API quedará disponible en `http://localhost:5000` por defecto.
 
+## Cliente de consola para consumir la API
+
+El proyecto `src/ItemManager.Client` ofrece un cliente de referencia que consume los endpoints expuestos por la API minimalista.
+Funciona en cualquier sistema operativo con .NET 8 instalado y facilita probar el flujo completo sin necesidad de construir una
+interfaz gráfica.
+
+```bash
+dotnet run --project src/ItemManager.Client/ItemManager.Client.csproj -- --url=http://localhost:5000
+```
+
+Si omites el parámetro `--url`, el cliente intentará conectarse a `http://localhost:5000` o al valor definido en la variable de
+entorno `ITEM_MANAGER_BASE_URL`.
+
+Al iniciarse mostrará un menú interactivo con las siguientes acciones:
+
+1. **Iniciar sesión**: solicita usuario, contraseña y código TOTP vigente. Al autenticarse correctamente almacena el token de
+   sesión.
+2. **Listar items**: realiza `GET /items` usando el encabezado `X-Session-Token`.
+3. **Crear item**: envía `POST /items` con el cuerpo JSON correspondiente.
+4. **Actualizar item**: utiliza `PUT /items/{id}` para modificar nombre, descripción y cantidad.
+5. **Eliminar item**: invoca `DELETE /items/{id}`.
+6. **Cerrar sesión**: descarta el token para forzar un nuevo login en la siguiente operación protegida.
+
+Los errores de autenticación muestran mensajes claros y, en caso de que el token caduque, el cliente solicitará volver a iniciar
+sesión antes de continuar.
+
 ## Ejecutar la aplicación WinForms
 
 ```bash

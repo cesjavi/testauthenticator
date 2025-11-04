@@ -7,7 +7,7 @@ public class ItemRepository
     private readonly List<Item> _items =
     [
         new Item(1, "Laptop", "Dell XPS 13", 5),
-        new Item(2, "Monitor", "Monitor 24"" full HD", 8),
+        new Item(2, "Monitor", "Monitor 24 full HD", 8),
         new Item(3, "Teclado", "Teclado mecánico", 12)
     ];
 

@@ -1,4 +1,4 @@
-using ItemManager.Services;
+using ItemManager.Core.Services;
 
 namespace ItemManager.Filters;
 

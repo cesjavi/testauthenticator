@@ -1,6 +1,6 @@
+using ItemManager.Core.Models;
+using ItemManager.Core.Services;
 using ItemManager.Filters;
-using ItemManager.Models;
-using ItemManager.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,4 +110,3 @@ items.MapDelete("/{id:int}", (int id, ItemRepository repo) =>
 });
 
 app.Run();
-

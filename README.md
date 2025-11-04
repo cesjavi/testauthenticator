@@ -33,6 +33,14 @@ dotnet run --project src/ItemManager.Gui/ItemManager.Gui.csproj
 
 Al iniciar se solicitarán usuario, contraseña y el código TOTP vigente. El enlace "Ver secretos TOTP" muestra los secretos precargados y las URI `otpauth://` listas para registrar en Google Authenticator.
 
+## Configurar Google Authenticator
+
+1. Abre la aplicación Google Authenticator en tu dispositivo.
+2. Elige la opción de **Agregar cuenta** y selecciona "Introducir clave de configuración" (o escanear QR si generas el código con la URI `otpauth://`).
+3. Usa como **Nombre de cuenta** el issuer configurado en el proyecto, por defecto `ItemManager`. Puedes cambiarlo editando la constante `issuer` tanto en `src/ItemManager/Program.cs` como en `src/ItemManager.Gui/LoginForm.cs`.
+4. Copia el valor de `SecretKey` del usuario que desees registrar. Los secretos precargados se definen en `src/ItemManager.Core/Services/UserStore.cs`; puedes reemplazarlos por los de tu organización o agregar nuevos usuarios si lo necesitas.
+5. Guarda la cuenta y obtén el código TOTP de 6 dígitos generado por Google Authenticator para iniciar sesión en la API o en la aplicación WinForms.
+
 ## Usuarios de ejemplo
 
 Se incluyen usuarios precargados para facilitar las pruebas. Puedes consultarlos desde la interfaz gráfica (enlace "Ver secretos TOTP") o con el endpoint de la API:

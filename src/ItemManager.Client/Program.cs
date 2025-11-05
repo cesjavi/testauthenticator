@@ -23,6 +23,6 @@ using var httpClient = new HttpClient
     Timeout = TimeSpan.FromSeconds(30)
 };
 
-var apiClient = new ItemManagerApiClient(httpClient);
+var apiClient = new ItemManager.ClientApp.ItemManagerApiClient(httpClient);
 var app = new CliApplication(apiClient, baseUri);
 await app.RunAsync();

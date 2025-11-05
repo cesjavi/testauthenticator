@@ -68,6 +68,51 @@ app.MapPost("/auth/login", async (HttpContext context, AuthService authService) 
     });
 });
 
+app.MapPost("/auth/register", async (HttpContext context, UserStore userStore, TotpService totpService) =>
+{
+    var registerRequest = await context.Request.ReadFromJsonAsync<RegisterUserRequest>();
+    if (registerRequest is null)
+    {
+        return Results.BadRequest(new { error = "Solicitud inválida" });
+    }
+
+    var username = registerRequest.Username?.Trim();
+    var displayName = registerRequest.DisplayName?.Trim();
+    var password = registerRequest.Password?.Trim();
+
+    if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(displayName) || string.IsNullOrWhiteSpace(password))
+    {
+        return Results.BadRequest(new { error = "Todos los campos son obligatorios." });
+    }
+
+    var newUser = new User
+    {
+        Username = username,
+        DisplayName = displayName,
+        Password = password,
+        SecretKey = totpService.GenerateSecretKey()
+    };
+
+    if (!userStore.Add(newUser))
+    {
+        return Results.Conflict(new { error = "El usuario ya existe." });
+    }
+
+    var issuer = "ItemManager";
+    var otpAuthUri = totpService.BuildOtpAuthUri(newUser, issuer);
+
+    return Results.Ok(new
+    {
+        user = new
+        {
+            newUser.Username,
+            newUser.DisplayName
+        },
+        secretKey = newUser.SecretKey,
+        otpAuthUri
+    });
+});
+
 var items = app.MapGroup("/items");
 items.AddEndpointFilter<SessionValidationFilter>();
 

@@ -1,0 +1,63 @@
+@page
+@model ItemManager.WebApp.Pages.RegisterModel
+@{
+    ViewData["Title"] = "Registrar usuario";
+}
+<section class="card card--centered">
+    <header class="card__header">
+        <h1>Registrá un nuevo usuario</h1>
+        <p>Generá un secreto único para enrolarlo en Google Authenticator.</p>
+    </header>
+    <form method="post" class="form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+        {
+            <div class="alert alert--success">@Model.SuccessMessage</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert--error">@Model.ErrorMessage</div>
+        }
+        <div class="form__group">
+            <label asp-for="Input.Username"></label>
+            <input asp-for="Input.Username" class="form__control" autocomplete="off" />
+            <span asp-validation-for="Input.Username" class="form__error"></span>
+        </div>
+        <div class="form__group">
+            <label asp-for="Input.DisplayName"></label>
+            <input asp-for="Input.DisplayName" class="form__control" autocomplete="name" />
+            <span asp-validation-for="Input.DisplayName" class="form__error"></span>
+        </div>
+        <div class="form__group">
+            <label asp-for="Input.Password"></label>
+            <input asp-for="Input.Password" class="form__control" type="password" autocomplete="new-password" />
+            <span asp-validation-for="Input.Password" class="form__error"></span>
+        </div>
+        <button type="submit" class="button button--primary">Generar usuario</button>
+        <p class="form__hint">¿Ya tenés una cuenta? <a asp-page="/Index">Iniciá sesión</a>.</p>
+    </form>
+    @if (Model.Registration is not null)
+    {
+        <div class="registration-result">
+            <h2>Completá el registro en tu app TOTP</h2>
+            <p>Escaneá el código QR o ingresá manualmente los datos que generamos para @Model.Registration.DisplayName.</p>
+            @if (!string.IsNullOrEmpty(Model.QrCodeDataUri))
+            {
+                <img src="@Model.QrCodeDataUri" alt="Código QR para registrar al usuario" class="registration-result__qr" />
+            }
+            <div class="registration-result__details">
+                <div>
+                    <h3>Secreto TOTP</h3>
+                    <code>@Model.Registration.SecretKey</code>
+                </div>
+                <div>
+                    <h3>URI otpauth</h3>
+                    <code>@Model.Registration.OtpAuthUri</code>
+                </div>
+            </div>
+        </div>
+    }
+</section>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

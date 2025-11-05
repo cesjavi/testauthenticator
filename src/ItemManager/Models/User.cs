@@ -10,6 +10,8 @@ public class User
 
 public record LoginRequest(string Username, string Password, string OtpCode);
 
+public record RegisterUserRequest(string Username, string DisplayName, string Password);
+
 public record LoginResult(bool Success, User? User, string? SessionToken)
 {
     public static LoginResult Failed() => new(false, null, null);

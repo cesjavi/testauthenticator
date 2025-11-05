@@ -51,6 +51,53 @@ public class ItemManagerApiClient
         }
     }
 
+    public async Task<ApiResult<RegistrationResult>> RegisterUserAsync(string username, string displayName, string password)
+    {
+        try
+        {
+            var request = new RegisterUserRequest(username, displayName, password);
+            var response = await _httpClient.PostAsJsonAsync("/auth/register", request);
+
+            if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                var raw = await response.Content.ReadAsStringAsync();
+                var message = ExtractErrorMessage(raw, "El usuario ya existe. Elegí otro nombre de usuario.");
+                return ApiResult<RegistrationResult>.Fail(message);
+            }
+
+            if (response.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var raw = await response.Content.ReadAsStringAsync();
+                var message = ExtractErrorMessage(raw, "La solicitud de registro es inválida.");
+                return ApiResult<RegistrationResult>.Fail(message);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                return ApiResult<RegistrationResult>.Fail($"Error {response.StatusCode:D}: {error}");
+            }
+
+            var payload = await response.Content.ReadFromJsonAsync<RegisterUserResponse>(JsonOptions);
+            if (payload?.User is null || string.IsNullOrWhiteSpace(payload.SecretKey) || string.IsNullOrWhiteSpace(payload.OtpAuthUri))
+            {
+                return ApiResult<RegistrationResult>.Fail("La respuesta del servidor no tiene el formato esperado.");
+            }
+
+            var result = new RegistrationResult(
+                payload.User.Username,
+                payload.User.DisplayName,
+                payload.SecretKey,
+                payload.OtpAuthUri);
+
+            return ApiResult<RegistrationResult>.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return ApiResult<RegistrationResult>.Fail($"No se pudo contactar al servidor: {ex.Message}");
+        }
+    }
+
     public async Task<ApiResult<IReadOnlyList<Item>>> GetItemsAsync(string sessionToken)
     {
         var result = await SendAsync<List<Item>>(HttpMethod.Get, "/items", sessionToken);
@@ -146,5 +193,34 @@ public class ItemManagerApiClient
 
     private sealed record AuthResponse(string Token, UserSummary User);
 
+    private sealed record RegisterUserResponse(UserSummary User, string SecretKey, string OtpAuthUri);
+
     private sealed record UserSummary(string Username, string DisplayName);
+
+    private static string ExtractErrorMessage(string raw, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return fallback;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(raw);
+            if (document.RootElement.TryGetProperty("error", out var errorElement) && errorElement.ValueKind == JsonValueKind.String)
+            {
+                var message = errorElement.GetString();
+                if (!string.IsNullOrWhiteSpace(message))
+                {
+                    return message!;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // ignoramos errores de formato y devolvemos el contenido original
+        }
+
+        return raw;
+    }
 }

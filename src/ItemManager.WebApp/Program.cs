@@ -1,4 +1,5 @@
 using ItemManager.ApiClient;
+using ItemManager.WebApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,8 @@ builder.Services.AddHttpClient<ItemManagerApiClient>(client =>
     client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+
+builder.Services.AddSingleton<QrCodeService>();
 
 var app = builder.Build();
 

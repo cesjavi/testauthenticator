@@ -1,26 +1,31 @@
-using System.Linq;
-using System.Windows.Forms;
-using ItemManager.Core.Models;
-using ItemManager.Core.Services;
+using ItemManager.Models;
+using ItemManager.Services;
 using QRCoder;
+using ItemManager.Core.Services;
+
+using TotpService = ItemManager.Core.Services.TotpService;
+using Microsoft.AspNetCore.Identity;
+//using UserStore = ItemManager.Services.UserStore;
+
+
 
 namespace ItemManager.Gui;
 
 public partial class RegisterUserForm : Form
 {
-    private readonly UserStore _userStore;
+    private readonly ItemManager.Core.Services.UserStore _userStore;
     private readonly TotpService _totpService;
     private readonly string _issuer;
-    private readonly Timer _qrRefreshTimer;
+    private readonly System.Windows.Forms.Timer _qrRefreshTimer;
 
-    public RegisterUserForm(UserStore userStore, TotpService totpService, string issuer)
+    public RegisterUserForm(ItemManager.Core.Services.UserStore userStore, TotpService totpService, string issuer)
     {
         _userStore = userStore;
         _totpService = totpService;
         _issuer = issuer;
         InitializeComponent();
 
-        _qrRefreshTimer = new Timer
+        _qrRefreshTimer = new System.Windows.Forms.Timer
         {
             Interval = 30_000
         };
@@ -66,7 +71,7 @@ public partial class RegisterUserForm : Form
 
     private void UpdateSelectedUser()
     {
-        if (userComboBox.SelectedItem is not User selectedUser)
+        if (userComboBox.SelectedItem is not ItemManager.Core.Models.User selectedUser)
         {
             secretTextBox.Text = string.Empty;
             uriTextBox.Text = string.Empty;
@@ -121,7 +126,7 @@ public partial class RegisterUserForm : Form
         }
 
         var secret = _totpService.GenerateSecretKey();
-        var newUser = new User
+        var newUser = new ItemManager.Core.Models.User
         {
             Username = username,
             DisplayName = displayName,
@@ -139,7 +144,7 @@ public partial class RegisterUserForm : Form
 
     private void QrRefreshTimer_Tick(object? sender, EventArgs e)
     {
-        if (userComboBox.SelectedItem is User selectedUser)
+        if (userComboBox.SelectedItem is ItemManager.Core.Models.User selectedUser)
         {
             RefreshQrCodeFor(selectedUser, restartTimer: false);
         }
@@ -150,7 +155,7 @@ public partial class RegisterUserForm : Form
         }
     }
 
-    private void RefreshQrCodeFor(User selectedUser, bool restartTimer)
+    private void RefreshQrCodeFor(ItemManager.Core.Models.User selectedUser, bool restartTimer)
     {
         var uri = _totpService.BuildOtpAuthUri(selectedUser, _issuer);
         uriTextBox.Text = uri;

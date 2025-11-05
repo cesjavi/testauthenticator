@@ -11,6 +11,7 @@ public partial class RegisterUserForm : Form
     private readonly UserStore _userStore;
     private readonly TotpService _totpService;
     private readonly string _issuer;
+    private readonly Timer _qrRefreshTimer;
 
     public RegisterUserForm(UserStore userStore, TotpService totpService, string issuer)
     {
@@ -18,6 +19,12 @@ public partial class RegisterUserForm : Form
         _totpService = totpService;
         _issuer = issuer;
         InitializeComponent();
+
+        _qrRefreshTimer = new Timer
+        {
+            Interval = 30_000
+        };
+        _qrRefreshTimer.Tick += QrRefreshTimer_Tick;
     }
 
     private void RegisterUserForm_Load(object? sender, EventArgs e)
@@ -64,13 +71,12 @@ public partial class RegisterUserForm : Form
             secretTextBox.Text = string.Empty;
             uriTextBox.Text = string.Empty;
             UpdateQrCode(null);
+            _qrRefreshTimer.Stop();
             return;
         }
 
         secretTextBox.Text = selectedUser.SecretKey;
-        var uri = _totpService.BuildOtpAuthUri(selectedUser, _issuer);
-        uriTextBox.Text = uri;
-        UpdateQrCode(uri);
+        RefreshQrCodeFor(selectedUser, restartTimer: true);
     }
 
     private void UserComboBox_SelectedIndexChanged(object? sender, EventArgs e)
@@ -131,6 +137,37 @@ public partial class RegisterUserForm : Form
         passwordTextBox.Clear();
     }
 
+    private void QrRefreshTimer_Tick(object? sender, EventArgs e)
+    {
+        if (userComboBox.SelectedItem is User selectedUser)
+        {
+            RefreshQrCodeFor(selectedUser, restartTimer: false);
+        }
+        else
+        {
+            _qrRefreshTimer.Stop();
+            UpdateQrCode(null);
+        }
+    }
+
+    private void RefreshQrCodeFor(User selectedUser, bool restartTimer)
+    {
+        var uri = _totpService.BuildOtpAuthUri(selectedUser, _issuer);
+        uriTextBox.Text = uri;
+        UpdateQrCode(uri);
+
+        if (restartTimer)
+        {
+            RestartQrRefreshTimer();
+        }
+    }
+
+    private void RestartQrRefreshTimer()
+    {
+        _qrRefreshTimer.Stop();
+        _qrRefreshTimer.Start();
+    }
+
     private void UpdateQrCode(string? uri)
     {
         if (qrPictureBox.Image is not null)
@@ -149,5 +186,13 @@ public partial class RegisterUserForm : Form
         using var data = generator.CreateQrCode(uri, QRCodeGenerator.ECCLevel.Q);
         using var code = new QRCode(data);
         qrPictureBox.Image = code.GetGraphic(20);
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        _qrRefreshTimer.Stop();
+        _qrRefreshTimer.Tick -= QrRefreshTimer_Tick;
+        _qrRefreshTimer.Dispose();
+        base.OnFormClosed(e);
     }
 }

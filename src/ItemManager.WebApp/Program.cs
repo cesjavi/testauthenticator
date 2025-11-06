@@ -12,7 +12,7 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(20);
 });
 
-var apiBaseUrl = builder.Configuration["ItemManagerApi:BaseUrl"] ?? "http://localhost:5000";
+var apiBaseUrl = builder.Configuration["ItemManagerApi:BaseUrl"] ?? "http://localhost:60079";
 builder.Services.AddHttpClient<ItemManagerApiClient>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);

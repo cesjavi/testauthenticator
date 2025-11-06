@@ -1,0 +1,17 @@
+Cómo ejecutar la API minimalista
+Abre una terminal en la raíz del repositorio.
+
+Ejecuta el proyecto de la API con:
+
+dotnet run --project src/ItemManager/ItemManager.csproj
+La API quedará disponible en http://localhost:5000 (puerto predeterminado de Kestrel para este proyecto).
+
+Cómo ejecutar la aplicación web (Razor Pages)
+En otra terminal (o después de iniciar la API), lanza la aplicación web con:
+
+dotnet run --project src/ItemManager.WebApp/ItemManager.WebApp.csproj
+La interfaz quedará accesible en http://localhost:5130 (o el puerto que asigne Kestrel).
+
+La web consume la API usando la URL configurada en appsettings.json bajo ItemManagerApi:BaseUrl. 
+Si necesitas que ambos servicios usen puertos distintos, ajusta ese valor o establece la variable de
+entorno ASPNETCORE_URLS antes de iniciar cada servicio.

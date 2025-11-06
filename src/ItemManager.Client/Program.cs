@@ -7,12 +7,12 @@ baseUrl = string.IsNullOrWhiteSpace(baseUrl)
     ? Environment.GetEnvironmentVariable("ITEM_MANAGER_BASE_URL")
     : baseUrl;
 
-baseUrl = string.IsNullOrWhiteSpace(baseUrl) ? "http://localhost:5000" : baseUrl;
+baseUrl = string.IsNullOrWhiteSpace(baseUrl) ? "http://localhost:60079" : baseUrl;
 
 if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
 {
     Console.ForegroundColor = ConsoleColor.Red;
-    Console.WriteLine($"La URL '{baseUrl}' no es válida. Usa --url=http://localhost:5000");
+    Console.WriteLine($"La URL '{baseUrl}' no es válida. Usa --url=http://localhost:60079");
     Console.ResetColor();
     return;
 }

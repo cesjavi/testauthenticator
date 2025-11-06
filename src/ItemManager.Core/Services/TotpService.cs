@@ -29,7 +29,7 @@ public class TotpService
         return new string(chars);
     }
 
-    public bool ValidateCode(User user, string code, int tolerance = 1)
+    public bool ValidateCode(User user, string code, int tolerance = 10)
     {
         if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(user.SecretKey))
         {

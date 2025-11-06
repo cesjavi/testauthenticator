@@ -27,7 +27,7 @@ public partial class RegisterUserForm : Form
 
         _qrRefreshTimer = new System.Windows.Forms.Timer
         {
-            Interval = 30_000
+            Interval = 60_000
         };
         _qrRefreshTimer.Tick += QrRefreshTimer_Tick;
     }

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -98,6 +99,124 @@ public class ItemManagerApiClient
         }
     }
 
+    public async Task<ApiResult<PushDeviceRegistration>> RegisterPushDeviceAsync(PushDeviceRegistrationRequest request)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/auth/push/register", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var raw = await response.Content.ReadAsStringAsync();
+                var message = ExtractErrorMessage(raw, "No se pudo registrar el dispositivo para notificaciones push.");
+                return ApiResult<PushDeviceRegistration>.Fail(message, response.StatusCode == HttpStatusCode.Unauthorized);
+            }
+
+            var payload = await response.Content.ReadFromJsonAsync<PushDeviceRegistrationResponse>(JsonOptions);
+            if (payload?.Device is null)
+            {
+                return ApiResult<PushDeviceRegistration>.Fail("La respuesta del servidor no tiene el formato esperado.");
+            }
+
+            var registration = new PushDeviceRegistration(
+                payload.Device.DeviceId,
+                payload.Device.DeviceName,
+                payload.Device.RegisteredAt);
+
+            return ApiResult<PushDeviceRegistration>.Ok(registration);
+        }
+        catch (Exception ex)
+        {
+            return ApiResult<PushDeviceRegistration>.Fail($"No se pudo contactar al servidor: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResult<PushLoginChallenge>> InitiatePushLoginAsync(PushLoginRequest request)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/auth/push/login", request);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                return ApiResult<PushLoginChallenge>.Fail("Credenciales inválidas para el login push.");
+            }
+
+            if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                var raw = await response.Content.ReadAsStringAsync();
+                var message = ExtractErrorMessage(raw, "El usuario no tiene dispositivos registrados para push.");
+                return ApiResult<PushLoginChallenge>.Fail(message);
+            }
+
+            if (response.StatusCode == HttpStatusCode.Accepted)
+            {
+                var payload = await response.Content.ReadFromJsonAsync<PushLoginResponse>(JsonOptions);
+                if (payload?.Challenge is null || payload.User is null)
+                {
+                    return ApiResult<PushLoginChallenge>.Fail("La respuesta del servidor no tiene el formato esperado.");
+                }
+
+                var devices = payload.Challenge.Devices
+                    .Select(d => new PushChallengeTarget(d.DeviceId, d.DeviceName))
+                    .ToList()
+                    .AsReadOnly();
+
+                var result = new PushLoginChallenge(
+                    payload.Challenge.Id,
+                    payload.Challenge.ExpiresAt,
+                    devices,
+                    payload.User.Username,
+                    payload.User.DisplayName);
+
+                return ApiResult<PushLoginChallenge>.Ok(result);
+            }
+
+            var rawError = await response.Content.ReadAsStringAsync();
+            var genericMessage = ExtractErrorMessage(rawError, "No se pudo iniciar el desafío push.");
+            return ApiResult<PushLoginChallenge>.Fail(genericMessage);
+        }
+        catch (Exception ex)
+        {
+            return ApiResult<PushLoginChallenge>.Fail($"No se pudo contactar al servidor: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResult<AuthSession>> ConfirmPushLoginAsync(PushLoginConfirmationRequest request)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/auth/push/confirm", request);
+
+            if (response.StatusCode == HttpStatusCode.Gone)
+            {
+                var raw = await response.Content.ReadAsStringAsync();
+                var message = ExtractErrorMessage(raw, "El desafío expiró. Inicia sesión nuevamente.");
+                return ApiResult<AuthSession>.Fail(message);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var raw = await response.Content.ReadAsStringAsync();
+                var message = ExtractErrorMessage(raw, "No se pudo completar el login push.");
+                return ApiResult<AuthSession>.Fail(message);
+            }
+
+            var payload = await response.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
+            if (payload is null || string.IsNullOrWhiteSpace(payload.Token))
+            {
+                return ApiResult<AuthSession>.Fail("La respuesta del servidor no tiene el formato esperado.");
+            }
+
+            var session = new AuthSession(payload.Token, payload.User.Username, payload.User.DisplayName);
+            return ApiResult<AuthSession>.Ok(session);
+        }
+        catch (Exception ex)
+        {
+            return ApiResult<AuthSession>.Fail($"No se pudo contactar al servidor: {ex.Message}");
+        }
+    }
+
     public async Task<ApiResult<IReadOnlyList<Item>>> GetItemsAsync(string sessionToken)
     {
         var result = await SendAsync<List<Item>>(HttpMethod.Get, "/items", sessionToken);
@@ -194,6 +313,16 @@ public class ItemManagerApiClient
     private sealed record AuthResponse(string Token, UserSummary User);
 
     private sealed record RegisterUserResponse(UserSummary User, string SecretKey, string OtpAuthUri);
+
+    private sealed record PushDeviceRegistrationResponse(PushDeviceSummary Device);
+
+    private sealed record PushDeviceSummary(string DeviceId, string DeviceName, DateTimeOffset RegisteredAt);
+
+    private sealed record PushLoginResponse(PushChallengePayload Challenge, UserSummary User);
+
+    private sealed record PushChallengePayload(string Id, DateTimeOffset ExpiresAt, List<PushChallengeDevicePayload> Devices);
+
+    private sealed record PushChallengeDevicePayload(string DeviceId, string DeviceName);
 
     private sealed record UserSummary(string Username, string DisplayName);
 

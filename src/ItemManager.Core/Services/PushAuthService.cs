@@ -104,10 +104,10 @@ public class PushAuthService
             return PushLoginConfirmationResult.Failed("El dispositivo no coincide con el desafío enviado.");
         }
 
-        if (status == PushChallengeCompletionStatus.Expired)
+        /*if (status == PushChallengeCompletionStatus.Expired)
         {
             return PushLoginConfirmationResult.Expired("El desafío expiró. Inicia sesión nuevamente.");
-        }
+        }*/
 
         if (challenge is null)
         {

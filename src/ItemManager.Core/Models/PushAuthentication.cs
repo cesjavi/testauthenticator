@@ -51,5 +51,5 @@ public record PushLoginConfirmationResult(bool Success, string? Error, bool Expi
 {
     public static PushLoginConfirmationResult Successful(LoginResult login) => new(true, null, false, login);
     public static PushLoginConfirmationResult Failed(string error) => new(false, error, false, null);
-    //public static PushLoginConfirmationResult Expired(string error) => new(false, error, true, null);
+    public static PushLoginConfirmationResult Expired(string error) => new(false, error, true, null);
 }

@@ -20,8 +20,20 @@ builder.Services.AddHttpClient<FirebasePushNotificationService>(client =>
 {
     client.BaseAddress = new Uri("https://fcm.googleapis.com/");
 });
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
+
+app.UseCors();
 
 app.MapGet("/", () => Results.Json(new
 {

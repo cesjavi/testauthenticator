@@ -51,6 +51,12 @@ Aplicación Razor Pages que actúa como frontend web sobre la API. Administra el
 sesión en `ISession`, muestra el listado de items consumiendo el endpoint protegido y expone formularios para crear o eliminar
 registros, reutilizando los contratos definidos en `ItemManager.ApiClient`.
 
+### `src/ItemManager.PushClient`
+
+Aplicación web estática que simula un dispositivo capaz de recibir notificaciones push mediante Firebase Cloud Messaging. Desd
+e el navegador permite obtener el token FCM, registrar el dispositivo en la API (validando con TOTP) y aprobar los desafíos d
+e login enviados por el backend, mostrando en tiempo real el estado del desafío y el token de sesión emitido.
+
 ## Implementación de autenticación con TOTP
 
 El proyecto utiliza claves compartidas en formato Base32 y el algoritmo TOTP (RFC 6238) para generar y validar códigos de seis
@@ -76,7 +82,11 @@ Además del flujo basado en TOTP, la API expone un ejemplo de inicio de sesión 
 1. Crea un proyecto en [Firebase Console](https://console.firebase.google.com/) y habilita Cloud Messaging.
 2. Desde la sección **Project settings > Cloud Messaging**, copia el **Server key** (token de la API HTTP v1 o la clave heredada) que se utilizará para firmar las solicitudes.
 3. Anota el `Sender ID` y, si corresponde, el `App ID` de la aplicación móvil que recibirá las notificaciones.
-4. Edita `src/ItemManager/appsettings.json` y completa los valores dentro del bloque `Firebase`:
+4. Edita `src/ItemManager/appsettings.json` y completa los valores dentro del bloque `Firebase`.
+5. Sustituye los placeholders de `src/ItemManager.PushClient/wwwroot/firebase-config.js` con la configuración web que entrega Fi
+rebase (API Key, `messagingSenderId`, `appId` y la clave VAPID pública).
+
+La configuración de la API queda con la siguiente estructura:
 
 ```json
 {
@@ -136,6 +146,14 @@ La respuesta incluye `deviceId`, `deviceName` y la fecha de registro. Este ident
 3. **Consumir los endpoints protegidos**: una vez obtenido el token, se reutiliza el encabezado `X-Session-Token` para acceder a `/items`, sin diferencias con el resto de clientes.
 
 > **Nota:** si ningún dispositivo pudo recibir el push (por ejemplo, porque la `ServerKey` es incorrecta), la API cancelará el desafío y responderá con `502 Bad Gateway` indicando el error para facilitar el diagnóstico.
+
+### Probar el flujo con `ItemManager.PushClient`
+
+1. Ejecuta la API (`dotnet run --project src/ItemManager`) y asegúrate de que responda en `http://localhost:5000` (puedes ajustar la URL base desde la interfaz del cliente push).
+2. Levanta el nuevo proyecto de frontend con `dotnet run --project src/ItemManager.PushClient` y navega a la URL que imprima la consola (por defecto `http://localhost:5200`).
+3. Desde el navegador, pulsa **Inicializar Firebase y obtener token** para registrar el Service Worker y solicitar el permiso de notificaciones. El token generado se usará para registrar el dispositivo.
+4. Completa el formulario de **Registro de dispositivo** con usuario, contraseña y el código TOTP actual; al enviar el formulario se invocará `POST /auth/push/register`.
+5. Inicia el desafío con **Solicitar login con push**. Al llegar la notificación al navegador se habilitará el botón **Confirmar desafío recibido**, que invoca `POST /auth/push/confirm` y muestra el token de sesión devuelto.
 
 ## Ejemplos de uso
 

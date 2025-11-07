@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ItemManager Push Client</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>ItemManager Push Client</h1>
+    <p>Simulador web para registrar dispositivos, lanzar desafíos y aprobar logins con notificaciones push.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Configuración</h2>
+      <p>Completa <code>firebase-config.js</code> con los valores de tu proyecto de Firebase y luego inicializa la sesión.</p>
+      <div class="form-row">
+        <div>
+          <label for="apiBaseUrl">URL base de la API</label>
+          <input type="text" id="apiBaseUrl" placeholder="http://localhost:5000" autocomplete="off">
+        </div>
+        <div>
+          <label for="deviceName">Nombre del dispositivo</label>
+          <input type="text" id="deviceName" placeholder="Pixel de pruebas" autocomplete="off">
+        </div>
+      </div>
+      <button id="initializeFirebase">Inicializar Firebase y obtener token</button>
+      <div>
+        <label for="registrationToken">Token FCM generado</label>
+        <textarea id="registrationToken" readonly></textarea>
+      </div>
+      <p class="help">El token es único por navegador y se usa para registrar el dispositivo en la API.</p>
+    </section>
+
+    <section>
+      <h2>Registro de dispositivo</h2>
+      <form id="registerForm">
+        <div class="form-row">
+          <div>
+            <label for="registerUsername">Usuario</label>
+            <input type="text" id="registerUsername" autocomplete="username">
+          </div>
+          <div>
+            <label for="registerPassword">Contraseña</label>
+            <input type="password" id="registerPassword" autocomplete="current-password">
+          </div>
+          <div>
+            <label for="registerOtp">Código TOTP</label>
+            <input type="text" id="registerOtp" inputmode="numeric" pattern="[0-9]{6}" placeholder="123456" autocomplete="one-time-code">
+          </div>
+        </div>
+        <button type="submit">Registrar dispositivo en la API</button>
+      </form>
+      <div class="status-box" id="registeredDevice">Sin registrar.</div>
+    </section>
+
+    <section>
+      <h2>Inicio de sesión por push</h2>
+      <form id="loginForm">
+        <div class="form-row">
+          <div>
+            <label for="loginUsername">Usuario</label>
+            <input type="text" id="loginUsername" autocomplete="username">
+          </div>
+          <div>
+            <label for="loginPassword">Contraseña</label>
+            <input type="password" id="loginPassword" autocomplete="current-password">
+          </div>
+        </div>
+        <button type="submit">Solicitar login con push</button>
+      </form>
+      <div class="status-box" id="challengeInfo">Sin desafíos activos.</div>
+      <button id="confirmChallenge" disabled>Confirmar desafío recibido</button>
+      <div>
+        <label for="sessionToken">Token de sesión emitido</label>
+        <textarea id="sessionToken" readonly></textarea>
+      </div>
+    </section>
+
+    <section>
+      <h2>Eventos</h2>
+      <button id="clearLog" type="button">Limpiar</button>
+      <ul id="eventLog"></ul>
+    </section>
+  </main>
+  <footer>
+    <p>ItemManager Push Client &mdash; ejemplo educativo para probar el flujo 2FA con Firebase Cloud Messaging.</p>
+  </footer>
+</body>
+</html>

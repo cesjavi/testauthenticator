@@ -12,12 +12,43 @@ Este proyecto contiene un ejemplo mínimo construido con .NET que ofrece dos for
 
 ## Estructura
 
-* `src/ItemManager.Core`: biblioteca con los modelos y servicios compartidos (usuarios, autenticación, sesiones, items y TOTP).
-* `src/ItemManager`: API minimalista con endpoints para autenticación y gestión de items.
-* `src/ItemManager.ApiClient`: biblioteca reutilizable con un cliente HTTP fuertemente tipado para consumir la API.
-* `src/ItemManager.Gui`: aplicación WinForms que permite iniciar sesión y administrar los items directamente.
-* `src/ItemManager.WebApp`: aplicación Razor Pages que consume los endpoints protegidos de la API.
-* `src/ItemManager/Filters/SessionValidationFilter.cs`: filtro que protege el grupo de endpoints `/items` en la API.
+### `src/ItemManager.Core`
+
+Biblioteca de clases compartida que modela el dominio del ABM. Incluye entidades (`Item`, `User`), repositorios y servicios de
+negocio (`ItemRepository`, `AuthService`, `SessionService`, `UserStore`, `TotpService`) y contratos comunes reutilizados por el
+resto de los proyectos. Desde este ensamblado se centraliza la lógica de autenticación basada en TOTP, la creación de sesiones
+en memoria y las validaciones de negocio para altas, bajas y modificaciones de items.
+
+### `src/ItemManager`
+
+Proyecto ASP.NET Core Minimal API que expone los endpoints REST para autenticación y gestión de items. Configura la inyección de
+dependencias de los servicios de `ItemManager.Core`, define rutas como `/auth/login`, `/auth/users` y el grupo protegido `/items`,
+además de incluir utilidades como `Filters/SessionValidationFilter.cs` para aplicar la validación del token de sesión en todas
+las operaciones CRUD.
+
+### `src/ItemManager.ApiClient`
+
+Biblioteca de cliente HTTP fuertemente tipado pensada para reutilizarse en cualquier aplicación .NET que necesite consumir la
+API. Provee clases como `ItemManagerApiClient` y contratos de datos que encapsulan las llamadas `GET`, `POST`, `PUT` y `DELETE`
+contra los endpoints del proyecto `ItemManager`, manejando serialización JSON y encabezados de autenticación.
+
+### `src/ItemManager.Client`
+
+Aplicación de consola multiplataforma que utiliza la biblioteca `ItemManager.ApiClient` para interactuar con la API. Implementa
+un menú interactivo (`CliApplication`) que guía al usuario por el flujo de autenticación, listado de items y operaciones CRUD,
+ideal para pruebas rápidas desde la terminal sin necesidad de interfaz gráfica.
+
+### `src/ItemManager.Gui`
+
+Aplicación WinForms dirigida a `net8.0-windows` que consume directamente los servicios en memoria de `ItemManager.Core`. Ofrece
+formularios de inicio de sesión con validación TOTP, administración visual de items y herramientas para registrar usuarios en
+Google Authenticator (visualización de secretos, generación de QR y alta de cuentas de prueba).
+
+### `src/ItemManager.WebApp`
+
+Aplicación Razor Pages que actúa como frontend web sobre la API. Administra el ciclo de autenticación almacenando el token de
+sesión en `ISession`, muestra el listado de items consumiendo el endpoint protegido y expone formularios para crear o eliminar
+registros, reutilizando los contratos definidos en `ItemManager.ApiClient`.
 
 ## Implementación de autenticación con TOTP
 

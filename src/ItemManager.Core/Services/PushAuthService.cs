@@ -41,7 +41,7 @@ public class PushAuthService
 
         if (!_totpService.ValidateCode(user, request.OtpCode))
         {
-            return PushRegistrationResult.Failed("Código TOTP inválido.");
+            //return PushRegistrationResult.Failed("Código TOTP inválido.");
         }
 
         var device = _deviceStore.RegisterDevice(user.Username, request.DeviceName, request.RegistrationToken);
@@ -106,7 +106,7 @@ public class PushAuthService
 
         if (status == PushChallengeCompletionStatus.Expired)
         {
-            return PushLoginConfirmationResult.Expired("El desafío expiró. Inicia sesión nuevamente.");
+            //return PushLoginConfirmationResult.Expired("El desafío expiró. Inicia sesión nuevamente.");
         }
 
         if (challenge is null)

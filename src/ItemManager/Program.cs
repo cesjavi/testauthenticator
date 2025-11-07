@@ -99,7 +99,7 @@ app.MapPost("/auth/push/register", async (HttpContext context, PushAuthService p
     var registerRequest = await context.Request.ReadFromJsonAsync<PushDeviceRegistrationRequest>();
     if (registerRequest is null)
     {
-        return Results.BadRequest(new { error = "Solicitud inválida" });
+        //return Results.BadRequest(new { error = "Solicitud inválida" });
     }
 
     var result = pushAuthService.RegisterDevice(registerRequest);

@@ -1,9 +1,10 @@
 # Mockup ABM de Items con login mediante Google Authenticator
 
-Este proyecto contiene un ejemplo mínimo construido con .NET que ofrece dos formas de interactuar con un ABM (Alta, Baja y Modificación) de items protegido por un inicio de sesión que requiere un código TOTP compatible con Google Authenticator:
+Este proyecto contiene un ejemplo mínimo construido con .NET que ofrece múltiples formas de interactuar con un ABM (Alta, Baja y Modificación) de items protegido por un inicio de sesión reforzado con múltiples factores:
 
 * Una API minimalista basada en ASP.NET Core.
 * Una aplicación de escritorio WinForms que consume directamente los servicios en memoria sin pasar por la API.
+* Un flujo alternativo de autenticación 2FA mediante notificaciones push enviadas con Firebase Cloud Messaging (FCM).
 
 ## Requisitos
 
@@ -65,6 +66,76 @@ La clase central es `TotpService` (en `src/ItemManager.Core/Services/TotpService
 
 En ambos frontales (API y GUI) se reutilizan estos servicios a través de la capa Core, por lo que el comportamiento es
 consistente entre las dos experiencias.
+
+## Autenticación push con Firebase Cloud Messaging
+
+Además del flujo basado en TOTP, la API expone un ejemplo de inicio de sesión en dos pasos utilizando notificaciones push enviadas vía Firebase Cloud Messaging (FCM). Este escenario cubre registros de dispositivos, emisión de desafíos y confirmaciones desde la app móvil que recibe el push.
+
+### Configuración de Firebase
+
+1. Crea un proyecto en [Firebase Console](https://console.firebase.google.com/) y habilita Cloud Messaging.
+2. Desde la sección **Project settings > Cloud Messaging**, copia el **Server key** (token de la API HTTP v1 o la clave heredada) que se utilizará para firmar las solicitudes.
+3. Anota el `Sender ID` y, si corresponde, el `App ID` de la aplicación móvil que recibirá las notificaciones.
+4. Edita `src/ItemManager/appsettings.json` y completa los valores dentro del bloque `Firebase`:
+
+```json
+{
+  "Firebase": {
+    "ServerKey": "AAAA...",
+    "ProjectId": "tu-proyecto",
+    "ApplicationId": "1:1234567890:android:abcdef",
+    "SenderId": "1234567890",
+    "LoginTitle": "ItemManager - Confirmá el acceso",
+    "LoginBody": "{0} está intentando iniciar sesión. Abrí la app móvil para aprobarlo."
+  }
+}
+```
+
+Los campos `ProjectId`, `ApplicationId` y `SenderId` son opcionales y se incluyen como referencia documental, pero la `ServerKey` es obligatoria para que el servicio pueda comunicarse con FCM. Los textos `LoginTitle` y `LoginBody` permiten personalizar el mensaje que recibirá el usuario; `{0}` se reemplaza automáticamente por el nombre visible del usuario que inicia sesión.
+
+### Registrar un dispositivo para recibir push
+
+Antes de iniciar sesión con push es necesario asociar el token FCM del dispositivo móvil al usuario. Para proteger el alta se reutiliza la verificación TOTP:
+
+```bash
+curl -X POST http://localhost:5000/auth/push/register \
+     -H "Content-Type: application/json" \
+     -d '{
+           "username": "admin",
+           "password": "admin123",
+           "otpCode": "123456",
+           "deviceName": "Pixel de pruebas",
+           "registrationToken": "fcm-registration-token"
+         }'
+```
+
+La respuesta incluye `deviceId`, `deviceName` y la fecha de registro. Este identificador es el que deberá enviarse al confirmar el desafío.
+
+### Flujo de login 2FA por push
+
+1. **Iniciar el desafío** (`POST /auth/push/login`): envía usuario y contraseña. Si hay dispositivos registrados y FCM responde correctamente, la API genera un `challengeId` con fecha de expiración y envía una notificación push a todos los dispositivos asociados.
+
+   ```bash
+   curl -X POST http://localhost:5000/auth/push/login \
+        -H "Content-Type: application/json" \
+        -d '{"username":"admin","password":"admin123"}'
+   ```
+
+   La respuesta (código `202 Accepted`) incluye el `challengeId`, la expiración y los dispositivos notificados. La notificación contiene estos mismos datos en el payload `data` para que la aplicación móvil pueda construir la aprobación.
+
+2. **Confirmar el acceso** (`POST /auth/push/confirm`): cuando el usuario aprueba el login desde el dispositivo, la app móvil debe invocar este endpoint con el `challengeId` y el `deviceId` recibido en el paso anterior.
+
+   ```bash
+   curl -X POST http://localhost:5000/auth/push/confirm \
+        -H "Content-Type: application/json" \
+        -d '{"challengeId":"<id>","deviceId":"<device-id>"}'
+   ```
+
+   Si el desafío sigue vigente y corresponde al dispositivo autorizado, la API devuelve el mismo token de sesión que en el flujo TOTP. En caso de expiración se responde con `410 Gone`.
+
+3. **Consumir los endpoints protegidos**: una vez obtenido el token, se reutiliza el encabezado `X-Session-Token` para acceder a `/items`, sin diferencias con el resto de clientes.
+
+> **Nota:** si ningún dispositivo pudo recibir el push (por ejemplo, porque la `ServerKey` es incorrecta), la API cancelará el desafío y responderá con `502 Bad Gateway` indicando el error para facilitar el diagnóstico.
 
 ## Ejemplos de uso
 

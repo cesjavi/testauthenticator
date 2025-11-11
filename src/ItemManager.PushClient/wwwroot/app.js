@@ -164,10 +164,11 @@ async function registerDevice(event) {
 
   const username = elements.registerUsername.value.trim();
   const password = elements.registerPassword.value.trim();
-  const otpCode = elements.registerOtp.value.trim();
+  //const otpCode = elements.registerOtp.value.trim();
   const deviceName = elements.deviceName.value.trim() || 'Dispositivo web';
 
-  if (!username || !password || !otpCode) {
+ //if (!username || !password || !otpCode) {
+  if (!username || !password ) {
     log('Completá usuario, contraseña y código TOTP para registrar el dispositivo.', true);
     return;
   }

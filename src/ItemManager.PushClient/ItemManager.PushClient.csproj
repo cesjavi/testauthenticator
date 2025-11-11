@@ -4,4 +4,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Google.Apis.Auth" Version="1.72.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ItemManager.Core\ItemManager.Core.csproj" />
+  </ItemGroup>
 </Project>

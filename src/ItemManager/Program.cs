@@ -15,7 +15,7 @@ builder.Services.AddSingleton<PushDeviceStore>();
 builder.Services.AddSingleton<PushChallengeService>();
 builder.Services.AddSingleton<PushAuthService>();
 builder.Services.AddSingleton<SessionValidationFilter>();
-builder.Services.Configure<FirebasePushOptions>(builder.Configuration.GetSection("Firebase"));
+builder.Services.Configure<FirebasePushOptions>(builder.Configuration.GetSection("FirebasePushOptions"));
 builder.Services.AddHttpClient<FirebasePushNotificationService>(client =>
 {
     client.BaseAddress = new Uri("https://fcm.googleapis.com/");
@@ -97,6 +97,7 @@ app.MapPost("/auth/login", async (HttpContext context, AuthService authService) 
 app.MapPost("/auth/push/register", async (HttpContext context, PushAuthService pushAuthService) =>
 {
     var registerRequest = await context.Request.ReadFromJsonAsync<PushDeviceRegistrationRequest>();
+    Console.WriteLine(registerRequest);
     if (registerRequest is null)
     {
         //return Results.BadRequest(new { error = "Solicitud inválida" });

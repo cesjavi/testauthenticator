@@ -7,3 +7,5 @@ obj/
 *.tmp
 /coverage/
 /.idea/
+
+.fake

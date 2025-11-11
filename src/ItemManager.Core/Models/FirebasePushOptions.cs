@@ -8,4 +8,5 @@ public class FirebasePushOptions
     public string? SenderId { get; set; }
     public string? LoginTitle { get; set; }
     public string? LoginBody { get; set; }
+    public string? ServiceAccountPath { get; set; } // Add this property to fix CS1061
 }

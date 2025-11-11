@@ -1,4 +1,10 @@
+using ItemManager.Core.Models;
+using ItemManager.Core.Services;
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure<FirebasePushOptions>(
+    builder.Configuration.GetSection("FirebasePushOptions"));
+builder.Services.AddHttpClient<FirebasePushNotificationService>();
 
 builder.Services.AddResponseCompression(options =>
 {
